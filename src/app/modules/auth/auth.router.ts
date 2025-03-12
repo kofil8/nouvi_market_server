@@ -12,6 +12,8 @@ router.post(
   AuthControllers.loginUser,
 );
 
+router.post('/social-login', AuthControllers.socialLogin);
+
 router.post('/logout', auth(), AuthControllers.logoutUser);
 
 export const AuthRouters = router;

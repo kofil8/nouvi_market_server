@@ -19,16 +19,23 @@ const loginUser = catchAsync(async (req, res) => {
 });
 
 const socialLogin = catchAsync(async (req, res) => {
-  const { email, role, fcmToken } = req.body;
-  const result = await AuthServices.socialLoginFromDB({
+  const { email, role, name, fcmToken } = req.body;
+  const result = await AuthServices.socialLogin({
     email,
     role,
+    name,
     fcmToken,
   });
+
+  const statusCode = result.isNewUser ? httpStatus.CREATED : httpStatus.OK;
+  const message = result.isNewUser
+    ? 'User successfully created'
+    : 'User successfully logged in';
+
   sendResponse(res, {
-    statusCode: httpStatus.OK,
+    statusCode,
     success: true,
-    message: 'User successfully logged in',
+    message,
     data: result,
   });
 });

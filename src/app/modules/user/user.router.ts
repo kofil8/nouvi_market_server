@@ -1,4 +1,4 @@
-import { UserRole } from '@prisma/client';
+// import { UserRole } from '@prisma/client';
 import express from 'express';
 import { fileUploader } from '../../../helpars/fileUploader';
 import parseBodyData from '../../../helpars/parseBodyData';
@@ -35,12 +35,6 @@ router.post(
   validateRequest(UserValidations.resetPassword),
   UserControllers.resetPassword,
 );
-
-router.get('/', auth(UserRole.ADMIN), UserControllers.getAllUsers);
-
-router.get('/:id', auth(UserRole.ADMIN), UserControllers.getUserDetails);
-
-router.delete('/:id', auth(UserRole.ADMIN), UserControllers.deleteUser);
 
 router.post(
   '/forgot-password',

@@ -208,57 +208,6 @@ const verifyOtp = async (payload: VerifyOtpPayload) => {
   };
 };
 
-const getAllUsersFromDB = async () => {
-  const result = await prisma.user.findMany({
-    where: {
-      isVerified: true,
-    },
-  });
-
-  const filtered = result.map((user) => {
-    const { password, ...rest } = user;
-    return Object.fromEntries(
-      Object.entries(rest).filter(([_, value]) => value !== null),
-    );
-  });
-
-  return filtered;
-};
-
-const getUserDetailsFromDB = async (id: string) => {
-  const user = await prisma.user.findUnique({
-    where: {
-      id,
-    },
-  });
-  if (!user) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'User not found');
-  }
-
-  const { password, ...rest } = user;
-
-  const filteredProfile = Object.fromEntries(
-    Object.entries(rest).filter(([_, value]) => value !== null),
-  );
-  return filteredProfile;
-};
-
-const deleteUser = async (id: string) => {
-  const existingUser = await prisma.user.findUnique({
-    where: { id },
-  });
-
-  if (!existingUser) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'User not found');
-  }
-  const result = await prisma.user.delete({
-    where: {
-      id: id,
-    },
-  });
-  return;
-};
-
 const forgotPassword = async (payload: { email: string }) => {
   const { otp, otpExpiry } = await generateOtp(payload);
 
@@ -286,6 +235,8 @@ const forgotPassword = async (payload: { email: string }) => {
       },
     });
   }
+
+  return { otpExpiry };
 };
 
 const resendOtpRest = async (payload: { email: string }) => {
@@ -350,11 +301,12 @@ const verifyResetOtp = async (payload: { email: string; otp: number }) => {
     },
   });
 
-  const accessToken = generateTokenReset(
+  const accessToken = generateToken(
     {
       id: userData.id,
-      email: userData.email,
-      isVerified: userData.isVerified,
+      email: userData.email as string,
+      role: userData.role,
+      isOnline: userData.isOnline,
     },
     config.jwt.jwt_secret as Secret,
     config.jwt.expires_in as string,
@@ -366,47 +318,23 @@ const verifyResetOtp = async (payload: { email: string; otp: number }) => {
   };
 };
 
-const resetPassword = async (
-  accessToken: string,
-  payload: { password: string },
-) => {
-  if (!accessToken) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, 'You are not authorized!');
-  }
-
-  const decodedToken = jwtHelpers.verifyToken(
-    accessToken,
-    config.jwt.jwt_secret as Secret,
-  );
-
-  const email = decodedToken?.email;
-
-  if (!email) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, 'You are not authorized!');
-  }
-
+const resetPassword = async (userId: string, newPassword: string) => {
   const userData = await prisma.user.findUnique({
-    where: {
-      email,
-    },
+    where: { id: userId },
   });
 
   if (!userData) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'User not found');
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
 
-  const hashedPassword: string = await bcrypt.hash(payload.password, 12);
+  const hashedPassword = await bcrypt.hash(newPassword, config.salt);
 
   await prisma.user.update({
-    where: {
-      email,
-    },
-    data: {
-      password: hashedPassword,
-    },
+    where: { id: userId },
+    data: { password: hashedPassword },
   });
 
-  return;
+  return { message: 'Password updated successfully' };
 };
 
 const changePassword = async (userId: string, payload: any) => {
@@ -426,7 +354,7 @@ const changePassword = async (userId: string, payload: any) => {
 
   const isPasswordCorrect = await bcrypt.compare(
     payload.oldPassword,
-    userData.password,
+    userData.password as string,
   );
   if (!isPasswordCorrect) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid old password');
@@ -469,9 +397,6 @@ export const UserServices = {
   registerUserIntoDB,
   checkUserName,
   resendOtpReg,
-  getAllUsersFromDB,
-  getUserDetailsFromDB,
-  deleteUser,
   forgotPassword,
   resendOtpRest,
   resetPassword,

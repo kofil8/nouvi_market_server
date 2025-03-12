@@ -6,12 +6,13 @@ import prisma from '../../helpers/prisma';
 import ApiError from '../../errors/ApiError';
 import { generateOtpReg } from '../../utils/otpGenerateReg';
 import { generateToken } from '../../utils/generateToken';
-import { UserRole } from '@prisma/client';
-import e from 'express';
+import { Status, UserRole } from '@prisma/client';
+import { stripe } from '../../utils/stripe';
 
 interface socialLoginPayload {
   email: string;
-  role: UserRole;
+  role?: UserRole | undefined;
+  name?: string;
   fcmToken?: string;
 }
 const loginUserFromDB = async (payload: {
@@ -24,6 +25,10 @@ const loginUserFromDB = async (payload: {
       email: payload.email,
     },
   });
+
+  if (userData?.status == Status.INACTIVE) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'User is inactive');
+  }
 
   if (!userData) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'User not found');
@@ -97,28 +102,85 @@ const loginUserFromDB = async (payload: {
   };
 };
 
-const socilaLogin = async (payload: socialLoginPayload) => {
-  const userData = await prisma.user.findUnique({
-    where: {
-      email: payload.email,
-    },
+const socialLogin = async (payload: socialLoginPayload) => {
+  const { email, role, name, fcmToken } = payload;
+
+  const user = await prisma.user.findUnique({
+    where: { email },
   });
 
-  if (!userData) {
-    throw new ApiError(httpStatus.BAD_REQUEST, 'User not found');
+  let isNewUser = false;
+
+  if (!user) {
+    const newUser = await prisma.user.create({
+      data: {
+        email,
+        role,
+        name,
+        isVerified: true,
+        isOnline: true,
+        fcmToken: fcmToken || undefined,
+      },
+    });
+
+    const stripeCustomer = await stripe.customers.create({
+      email: newUser.email,
+      name: newUser.name,
+    });
+
+    await prisma.user.update({
+      where: { email: newUser.email },
+      data: { stripeCustomerId: stripeCustomer.id },
+    });
+
+    isNewUser = true;
+
+    const accessToken = generateToken(
+      {
+        id: newUser.id,
+        email: newUser.email,
+        role: newUser.role,
+        isOnline: newUser.isOnline,
+      },
+      config.jwt.jwt_secret as Secret,
+      config.jwt.expires_in as string,
+    );
+
+    return {
+      isNewUser,
+      accessToken,
+      id: newUser.id,
+      email: newUser.email,
+      role: newUser.role,
+    };
   }
 
-  const updatedUser = await prisma.user.create({
-    where: {
-      email: payload.email,
-    },
+  await prisma.user.update({
+    where: { email },
     data: {
-      email: payload.email,
-      role: payload.role,
-      isVerified: true,
+      fcmToken: fcmToken || undefined,
       isOnline: true,
     },
   });
+
+  const accessToken = generateToken(
+    {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      isOnline: user.isOnline,
+    },
+    config.jwt.jwt_secret as Secret,
+    config.jwt.expires_in as string,
+  );
+
+  return {
+    isNewUser,
+    accessToken,
+    id: user.id,
+    email: user.email,
+    role: user.role,
+  };
 };
 
 const logoutUser = async (id: string) => {
@@ -148,4 +210,4 @@ const logoutUser = async (id: string) => {
   return;
 };
 
-export const AuthServices = { loginUserFromDB, logoutUser };
+export const AuthServices = { loginUserFromDB, socialLogin, logoutUser };

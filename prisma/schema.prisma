@@ -52,7 +52,7 @@ model User {
 
   status Status @default(ACTIVE)
 
-  role      UserRole
+  role      UserRole @default(BUYER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

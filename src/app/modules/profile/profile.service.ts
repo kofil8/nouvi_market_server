@@ -69,7 +69,18 @@ const updateMyProfileIntoDB = async (id: string, payload: any, file: any) => {
   return filteredProfile;
 };
 
+const deleteMyProfile = async (id: string) => {
+  const result = await prisma.user.delete({
+    where: {
+      id: id,
+    },
+  });
+
+  return result;
+};
+
 export const ProfileServices = {
   getMyProfileFromDB,
   updateMyProfileIntoDB,
+  deleteMyProfile,
 };

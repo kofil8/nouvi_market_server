@@ -17,4 +17,22 @@ router.delete(
   DashboardControllers.deleteAdmin,
 );
 
+router.get(
+  '/get-all-users',
+  auth(UserRole.SUPER_ADMIN, UserRole.ADMIN),
+  DashboardControllers.getAllUsers,
+);
+
+router.get(
+  '/get-user/:id',
+  auth(UserRole.SUPER_ADMIN, UserRole.ADMIN),
+  DashboardControllers.getUserById,
+);
+
+router.delete(
+  '/delete-user/:id',
+  auth(UserRole.SUPER_ADMIN, UserRole.ADMIN),
+  DashboardControllers.deleteUser,
+);
+
 export const AdminRouters = router;

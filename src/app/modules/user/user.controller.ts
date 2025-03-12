@@ -38,43 +38,12 @@ const resendOtpReg = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getAllUsers = catchAsync(async (req: Request, res: Response) => {
-  const result = await UserServices.getAllUsersFromDB();
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    message: 'Users Retrieve successfully',
-    data: result,
-  });
-});
-
-const getUserDetails = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const result = await UserServices.getUserDetailsFromDB(id);
-
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    message: 'User details retrieved successfully',
-    data: result,
-  });
-});
-
-const deleteUser = catchAsync(async (req: Request, res: Response) => {
-  const id = req.user.id;
-  const result = await UserServices.deleteUser(id);
-
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    message: 'User deleted successfully',
-    data: result,
-  });
-});
-
 const forgotPassword = catchAsync(async (req: Request, res: Response) => {
   const result = await UserServices.forgotPassword(req.body);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
-    message: 'OTP sent successfully',
+    message: 'OTP sent successfully, please check your email',
     data: result,
   });
 });
@@ -114,10 +83,9 @@ const ResetOtpVerify = catchAsync(async (req: Request, res: Response) => {
 });
 
 const resetPassword = catchAsync(async (req: Request, res: Response) => {
-  const password = req.body.password;
-  const accessToken = req.headers.authorization as string;
-  const result = await UserServices.resetPassword(accessToken, { password });
-
+  const { password } = req.body;
+  const userId = req.user.id;
+  const result = await UserServices.resetPassword(userId, password);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     message: 'Password reset successfully',
@@ -153,9 +121,6 @@ export const UserControllers = {
   registerUser,
   checkuserName,
   resendOtpReg,
-  getAllUsers,
-  getUserDetails,
-  deleteUser,
   forgotPassword,
   resendOtpRest,
   ResetOtpVerify,

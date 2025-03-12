@@ -3,6 +3,7 @@ import httpStatus from 'http-status';
 import { ProfileServices } from './profile.service';
 import catchAsync from '../../utils/catchAsync';
 import sendResponse from '../../utils/sendResponse';
+import { http } from 'winston';
 
 const getMyProfile = catchAsync(async (req: Request, res: Response) => {
   const id = req.user.id;
@@ -19,7 +20,7 @@ const getMyProfile = catchAsync(async (req: Request, res: Response) => {
 const updateMyProfile = catchAsync(async (req: Request, res: Response) => {
   const id = req.user.id;
   const payload = req.body.bodyData;
-  const file = req.file as any;
+  const file = req.file;
   const result = await ProfileServices.updateMyProfileIntoDB(id, payload, file);
 
   sendResponse(res, {
@@ -29,7 +30,21 @@ const updateMyProfile = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+
+const deleteMyProfile = catchAsync(async (req: Request, res: Response) => {
+  const id = req.user.id;
+  const result = await ProfileServices.deleteMyProfile(id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'User profile delete successfully',
+    data: result,
+  });
+});
+
 export const ProfileControllers = {
   getMyProfile,
   updateMyProfile,
+  deleteMyProfile,
 };
