@@ -8,9 +8,6 @@ const getMyProfileFromDB = async (id: string) => {
     where: {
       id: id,
     },
-    include: {
-      athlete: true,
-    },
   });
 
   if (!profile) {

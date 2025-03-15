@@ -3,7 +3,6 @@ import httpStatus from 'http-status';
 import { ProfileServices } from './profile.service';
 import catchAsync from '../../utils/catchAsync';
 import sendResponse from '../../utils/sendResponse';
-import { http } from 'winston';
 
 const getMyProfile = catchAsync(async (req: Request, res: Response) => {
   const id = req.user.id;
